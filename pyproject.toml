@@ -1,0 +1,55 @@
+[project]
+name = "gitlab-fsspec"
+version = "0.1.0"
+description = "fsspec implementation for GitLab repositories"
+readme = "README.md"
+authors = [
+    { name = "Gabriel Chaperon", email = "gabrielchaperonb@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fsspec>=2023.1.0",
+    "python-gitlab>=4.0.0",
+    "requests>=2.25.0",
+    "pydantic>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.entry-points."fsspec.specs"]
+gitlab = "gitlab_fsspec:GitLabFileSystem"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "N",    # pep8-naming
+    "S",    # flake8-bandit (security)
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501", # line too long, handled by formatter
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
