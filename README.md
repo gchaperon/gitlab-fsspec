@@ -1,15 +1,20 @@
 # GitLab fsspec
 
-A filesystem interface for GitLab repositories compatible with fsspec.
+A read-only filesystem interface for GitLab repositories compatible with fsspec.
 
 ## Features
 
-- **GitLab Repository Access**: Browse files and directories in GitLab repositories
-- **fsspec Compatible**: Use with any fsspec-compatible library (pandas, dask, etc.)
-- **URI Support**: Access files using `gitlab://project/path@ref/path/to/file` syntax with support for deeply nested projects
-- **Authentication**: Support for private tokens, OAuth tokens, and job tokens
-- **Branch/Tag Support**: Access different branches, tags, or specific commits
-- **Self-hosted GitLab**: Works with self-hosted GitLab instances
+- **Read-Only GitLab Access**: Browse files and directories in GitLab repositories using standard filesystem operations
+- **fsspec Integration**: Automatic registration with fsspec ecosystem - works with pandas, dask, and other fsspec-compatible libraries
+- **Flexible URI Parsing**: Custom URL parsing with regex support for `gitlab://project/path@ref/file/path` format
+- **Nested Project Support**: Handle deeply nested GitLab projects (e.g., `group/subgroup/project`)
+- **Branch/Tag/Commit Support**: Access different branches, tags, or specific commit SHAs
+- **Authentication**: Support for GitLab private tokens for accessing private repositories  
+- **Self-hosted GitLab**: Configurable GitLab instance URL (defaults to gitlab.com)
+- **Glob Pattern Support**: Built-in support for glob patterns to find multiple files
+- **Pydantic Validation**: Uses Pydantic models for robust API response validation
+- **Byte Range Reading**: Support for reading specific byte ranges from files
+- **Proper File Sizes**: Custom `info()` implementation to get actual file sizes from GitLab's files API
 
 ## Installation
 
@@ -59,18 +64,19 @@ print(f"Found {len(nested_files)} files in nested project")
 The GitLab filesystem supports URIs in the format:
 
 ```
-gitlab://project/path@ref/path/to/file
+gitlab://<repo/path>[@<ref>][:<path/to/file>]
 ```
 
 Where:
-- `project/path`: GitLab project path (can be deeply nested, e.g., `group/subgroup/project`)
-- `ref`: Branch name, tag, or commit SHA (optional, defaults to default branch)
-- `path/to/file`: Path to the file within the repository
+- `<repo/path>`: GitLab project path (can be deeply nested, e.g., `group/subgroup/project`)
+- `[@<ref>]`: Optional branch name, tag, or commit SHA (defaults to default branch)
+- `[:<path/to/file>]`: Optional path to the file within the repository
 
 Examples:
-- `gitlab://gitlab-org/gitlab@master/README.md` (simple project)
-- `gitlab://gitlab-org/monetization/monetization-platform@main/README.md` (nested project)
-- `gitlab://gitlab-org/gitlab/README.md` (uses default branch)
+- `gitlab://gitlab-org/gitlab@master:README.md` (simple project with branch and file)
+- `gitlab://gitlab-org/monetization/monetization-platform@main:README.md` (nested project)
+- `gitlab://gitlab-org/gitlab:README.md` (uses default branch)
+- `gitlab://gitlab-org/gitlab` (repository root)
 
 ### Authentication
 
@@ -124,26 +130,6 @@ fs = GitLabFileSystem(project_path='group/repo', sha='v1.0.0')
 fs = GitLabFileSystem(project_path='group/repo', sha='abc123def456')
 ```
 
-### Integration with pandas
-
-```python
-import pandas as pd
-
-# Read CSV from GitLab repository (new format)
-df = pd.read_csv('gitlab://group/repo@main/data/file.csv',
-                 storage_options={'project_path': 'group/repo'})
-
-# Read with authentication (new format)
-df = pd.read_csv(
-    'gitlab://group/repo@main/data/file.csv',
-    storage_options={
-        'project_path': 'group/repo',
-        'private_token': 'your-token',
-        'url': 'https://gitlab.example.com'
-    }
-)
-```
-
 ### File Operations
 
 ```python
@@ -167,52 +153,41 @@ print(f"File size: {info['size']} bytes")
 with fs.open('README.md', 'rb') as f:
     content = f.read()
 
-# Standard filesystem operations only
-# Use python-gitlab directly for branches/tags if needed
+# Use glob patterns to find files
+txt_files = fs.glob('**/*.txt')
+print(f"Found {len(txt_files)} .txt files")
 ```
-
-## API Reference
-
-### GitLabFileSystem
-
-Main filesystem class for GitLab repositories.
-
-#### Parameters
-
-- `project_path` (str): GitLab project path (can be deeply nested, e.g., 'group/subgroup/project')
-- `sha` (str, optional): SHA, branch, or tag to fetch from (defaults to default branch)
-- `url` (str, optional): GitLab instance URL (default: https://gitlab.com)
-- `private_token` (str, optional): GitLab private access token
-- `oauth_token` (str, optional): GitLab OAuth token
-- `job_token` (str, optional): GitLab CI job token
-- `timeout` (float, optional): Request timeout in seconds
-- `org` (str, optional): **Deprecated** - use `project_path` instead. For backward compatibility only.
-- `repo` (str, optional): **Deprecated** - use `project_path` instead. For backward compatibility only.
-
-#### Methods
-
-- `ls(path, detail=False)`: List directory contents
-- `info(path)`: Get file/directory information
-- `exists(path)`: Check if path exists
-- `isfile(path)`: Check if path is a file
-- `isdir(path)`: Check if path is a directory  
-- `open(path, mode='rb')`: Open file for reading
-
 
 ## Development
 
 This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
 
 ```bash
-# Install dependencies
+# Install dependencies and set up development environment
 uv sync
 
-# Run tests
-uv run python test_gitlab_fs.py
+# Run the full test suite (parallel execution enabled by default)
+uv run pytest
 
-# Run examples
-uv run python example_usage.py
+# Run tests with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_basic.py
+uv run pytest tests/test_url_parsing.py
+
+# Code quality checks
+uv run ruff check          # Linting
+uv run ruff format         # Code formatting
+uv run ruff check --fix    # Auto-fix linting issues
 ```
+
+### Test Structure
+
+- `tests/test_basic.py`: Core filesystem functionality, glob patterns, fsspec integration
+- `tests/test_url_parsing.py`: URL parsing and regex pattern validation
+- Tests use the public repository `gitlab-filesystem-test-repos/public` for validation
+- Parallel test execution is enabled by default via pytest-xdist
 
 ## License
 
