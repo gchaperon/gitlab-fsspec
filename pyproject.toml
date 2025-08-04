@@ -17,6 +17,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff>=0.8.0",
+    "jupyterlab",
+    "gcsfs",
+    "pytest>=8.0.0",
+    "pytest-xdist>=3.0.0",
 ]
 
 [build-system]
@@ -48,8 +52,17 @@ ignore = [
 fixable = ["ALL"]
 unfixable = []
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # Allow assert statements in test files
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+# Run tests in parallel by default
+addopts = "-n auto --tb=short --strict-markers"
+# Test discovery
+testpaths = ["tests"]
