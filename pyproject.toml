@@ -12,6 +12,7 @@ dependencies = [
     "python-gitlab>=4.0.0",
     "requests>=2.25.0",
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.10.1",
 ]
 
 [dependency-groups]
@@ -21,6 +22,7 @@ dev = [
     "gcsfs",
     "pytest>=8.0.0",
     "pytest-xdist>=3.0.0",
+    "python-dotenv>=1.1.1",
 ]
 
 [build-system]
