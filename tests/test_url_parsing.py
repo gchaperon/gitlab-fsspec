@@ -97,3 +97,12 @@ def test_fsspec_open_nested_file():
         content = f.read()
         assert isinstance(content, bytes)
         assert len(content) > 0
+
+
+def test_fsspec_open_text_mode():
+    """Test fsspec.open in text mode with automatic decoding."""
+    with fsspec.open("gitlab://gitlab-filesystem-test-repos/public:README.md", mode="r") as f:
+        content = f.read()
+        assert isinstance(content, str)
+        assert len(content) > 0
+        assert "GitLab Filesystem Test Repository" in content

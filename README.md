@@ -78,33 +78,59 @@ Examples:
 - `gitlab://gitlab-org/gitlab:README.md` (uses default branch)
 - `gitlab://gitlab-org/gitlab` (repository root)
 
-### Authentication
+### Private Repository Access
 
-For private repositories, provide authentication:
+For private repositories, provide authentication using the `auth_kwargs` parameter or environment variables:
 
 ```python
+import fsspec
 from gitlab_fsspec import GitLabFileSystem
 
-# Using private token (new format)
-fs = GitLabFileSystem(
-    project_path='your-group/subgroup/private-repo',
-    private_token='your-private-token'
-)
+# Method 1: Using auth_kwargs with private token
+auth = {"private_token": "your-private-token"}
+fs = GitLabFileSystem("your-group/private-repo", auth_kwargs=auth)
 
-# Using OAuth token (new format)
-fs = GitLabFileSystem(
-    project_path='your-group/private-repo',
-    oauth_token='your-oauth-token'
-)
+# Method 2: Using auth_kwargs with OAuth token  
+auth = {"oauth_token": "your-oauth-token"}
+fs = GitLabFileSystem("your-group/private-repo", auth_kwargs=auth)
 
-# Using job token (for CI/CD)
-fs = GitLabFileSystem(
-    project_path='your-group/private-repo',
-    job_token='your-job-token'
-)
+# Method 3: Using auth_kwargs with job token (for CI/CD)
+auth = {"job_token": "your-job-token"}
+fs = GitLabFileSystem("your-group/private-repo", auth_kwargs=auth)
 
-# Backward compatibility still supported
-fs = GitLabFileSystem(org='your-org', repo='private-repo', private_token='token')
+# Method 4: Using environment variables (automatic fallback)
+# Set GITLAB_PRIVATE_TOKEN, GITLAB_OAUTH_TOKEN, or CI_JOB_TOKEN
+fs = GitLabFileSystem("your-group/private-repo")  # Loads from environment
+
+# Method 5: Using fsspec.open with environment variables
+with fsspec.open("gitlab://your-group/private-repo:file.txt") as f:
+    content = f.read()
+```
+
+#### Authentication Precedence
+
+Authentication follows this precedence order:
+1. `private_token` (highest precedence, recommended)
+2. `oauth_token` 
+3. `job_token` (lowest precedence, limited permissions)
+
+#### Environment Variables
+
+The following environment variables are automatically loaded:
+- `GITLAB_PRIVATE_TOKEN` - GitLab private access token
+- `GITLAB_OAUTH_TOKEN` - GitLab OAuth token
+- `GITLAB_JOB_TOKEN` or `CI_JOB_TOKEN` - GitLab CI job token
+
+```bash
+# Set token for all GitLab filesystem operations
+export GITLAB_PRIVATE_TOKEN="your-token-here"
+
+# Now all operations work without explicit auth
+python -c "
+import fsspec
+with fsspec.open('gitlab://your-group/private-repo:README.md') as f:
+    print(f.read().decode())
+"
 ```
 
 ### Self-hosted GitLab
@@ -182,10 +208,30 @@ uv run ruff format         # Code formatting
 uv run ruff check --fix    # Auto-fix linting issues
 ```
 
+### Private Repository Testing
+
+To run tests against private repositories (authentication tests), configure a local environment file:
+
+```bash
+# Copy the template and add your GitLab private access token
+cp .env.test.template .env.test
+# Edit .env.test and add your GITLAB_PRIVATE_TOKEN
+
+# Run all tests (including private repo tests if token is configured)
+uv run pytest
+
+# Run only private repository tests
+uv run pytest tests/test_private_repo.py
+```
+
+**Note**: Private repository tests will be automatically skipped if no GitLab token is configured.
+
 ### Test Structure
 
 - `tests/test_basic.py`: Core filesystem functionality, glob patterns, fsspec integration
 - `tests/test_url_parsing.py`: URL parsing and regex pattern validation
+- `tests/test_private_repo.py`: Private repository access validation (requires token)
+- `tests/test_auth.py`: Authentication configuration and precedence tests
 - Tests use the public repository `gitlab-filesystem-test-repos/public` for validation
 - Parallel test execution is enabled by default via pytest-xdist
 

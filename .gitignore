@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# dot env files
+.env
+.env.*
+!.env.template
+!.env.*.template

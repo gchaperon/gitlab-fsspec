@@ -1,7 +1,8 @@
 """Test suite for gitlab-fsspec.
 
-Most tests use the public test repository at:
-https://gitlab.com/gitlab-filesystem-test-repos/public
+Most tests use the test repositories at:
+- Public: https://gitlab.com/gitlab-filesystem-test-repos/public
+- Private: https://gitlab.com/gitlab-filesystem-test-repos/private (same structure)
 
 Repository structure:
 .

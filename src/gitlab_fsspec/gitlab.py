@@ -5,7 +5,82 @@ import typing as tp
 
 import gitlab
 import pydantic
+import pydantic_settings
 from fsspec.spec import AbstractFileSystem
+
+
+class GitLabAuthKwargs(tp.TypedDict, total=False):
+    """Type definition for GitLab authentication kwargs."""
+
+    private_token: str
+    oauth_token: str
+    job_token: str
+
+
+class GitLabAuth(pydantic_settings.BaseSettings):
+    """GitLab authentication configuration with environment variable support.
+
+    Follows python-gitlab authentication precedence:
+    1. private_token (recommended)
+    2. oauth_token
+    3. job_token (limited permissions)
+    """
+
+    private_token: str | None = None
+    oauth_token: str | None = None
+    job_token: tp.Annotated[
+        str | None,
+        pydantic.Field(
+            validation_alias=pydantic.AliasChoices("gitlab_job_token", "ci_job_token")
+        ),
+    ] = None
+
+    model_config = pydantic_settings.SettingsConfigDict(
+        env_prefix="GITLAB_",
+        extra="ignore",
+    )
+
+    def get_auth_kwargs(self) -> GitLabAuthKwargs:
+        """Return auth kwargs dict for GitLab client with proper precedence.
+
+        Returns
+        -------
+        GitLabAuthKwargs
+            Authentication kwargs ready for gitlab.Gitlab constructor
+        """
+        if self.private_token:
+            return {"private_token": self.private_token}
+        elif self.oauth_token:
+            return {"oauth_token": self.oauth_token}
+        elif self.job_token:
+            return {"job_token": self.job_token}
+        else:
+            return {}
+
+
+def create_gitlab_client(
+    url: str,
+    auth_kwargs: GitLabAuthKwargs | None = None,
+) -> gitlab.Gitlab:
+    """Create and return a GitLab client instance with authentication.
+
+    Parameters
+    ----------
+    url : str
+        GitLab instance URL
+    auth_kwargs : GitLabAuthKwargs, optional
+        Authentication kwargs dict
+
+    Returns
+    -------
+    gitlab.Gitlab
+        Configured GitLab client instance
+    """
+    # Create GitLabAuth object using the provided auth_kwargs
+    # This allows environment variables to be used as fallback
+    auth = GitLabAuth(**(auth_kwargs or {}))
+    
+    return gitlab.Gitlab(url, **auth.get_auth_kwargs())
 
 
 class GitLabTreeItem(pydantic.BaseModel):
@@ -18,12 +93,6 @@ class GitLabTreeItem(pydantic.BaseModel):
     mode: str
 
 
-class GitLabTree(pydantic.RootModel[list[GitLabTreeItem]]):
-    """Model for validating a list of GitLab tree items."""
-
-    pass
-
-
 class GitLabFileSystem(AbstractFileSystem):
     """Minimal read-only interface to files in GitLab repositories.
 
@@ -31,12 +100,18 @@ class GitLabFileSystem(AbstractFileSystem):
     ----------
     project_path : str
         GitLab project path (e.g., 'group/project')
-    sha : str, optional
+    ref : str, optional
         Branch, tag, or commit SHA (defaults to repository's default branch)
     url : str, optional
         GitLab instance URL (defaults to https://gitlab.com)
-    private_token : str, optional
-        GitLab private access token
+    auth_kwargs : GitLabAuthKwargs, optional
+        Authentication kwargs dict with one of the keys: private_token, oauth_token, job_token
+
+    Notes
+    -----
+    Authentication precedence: private_token > oauth_token > job_token
+    If auth_kwargs is None, will attempt to load credentials from environment variables:
+    GITLAB_PRIVATE_TOKEN, GITLAB_OAUTH_TOKEN, GITLAB_JOB_TOKEN, or CI_JOB_TOKEN.
     """
 
     protocol = "gitlab"
@@ -56,9 +131,9 @@ class GitLabFileSystem(AbstractFileSystem):
     def __init__(
         self,
         project_path: str,
-        sha: str | None = None,
+        ref: str | None = None,
         url: str = "https://gitlab.com",
-        private_token: str | None = None,
+        auth_kwargs: GitLabAuthKwargs | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -67,20 +142,13 @@ class GitLabFileSystem(AbstractFileSystem):
         self.url = url
 
         # Initialize GitLab client
-        auth_kwargs = {}
-        if private_token:
-            auth_kwargs["private_token"] = private_token
-
-        self.gl = gitlab.Gitlab(url, **auth_kwargs)
+        self.gl = create_gitlab_client(url, auth_kwargs)
 
         # Get the project
-        try:
-            self.project = self.gl.projects.get(project_path)
-        except gitlab.GitlabGetError as e:
-            raise FileNotFoundError(f"Project {project_path} not found") from e
+        self.project = self.gl.projects.get(project_path)
 
         # Determine the reference to use
-        self.ref = sha if sha is not None else self.project.default_branch
+        self.ref = ref or self.project.default_branch
 
     @property
     def fsid(self):
@@ -106,14 +174,10 @@ class GitLabFileSystem(AbstractFileSystem):
             # If it doesn't match our pattern, return empty dict
             return {}
 
-        kwargs = {"project_path": match.group("project_path")}
-
-        # Add ref if specified
-        ref = match.group("ref")
-        if ref:
-            kwargs["sha"] = ref
-
-        return kwargs
+        # Extract only the constructor parameters we need
+        return {
+            k: v for k, v in match.groupdict().items() if k in ["project_path", "ref"]
+        }
 
     def ls(self, path, detail=False, **kwargs):
         """List objects at path.
@@ -128,10 +192,13 @@ class GitLabFileSystem(AbstractFileSystem):
         path = self._strip_protocol(path)
         path = tp.cast(str, path)
 
-        # Get repository tree and validate with Pydantic
-        items = GitLabTree(
-            self.project.repository_tree(path=path, ref=self.ref, get_all=True)
-        ).root
+        # Get repository tree and validate each item with Pydantic
+        items = [
+            GitLabTreeItem(**item)
+            for item in self.project.repository_tree(
+                path=path, ref=self.ref, get_all=True
+            )
+        ]
 
         # Convert to fsspec format
         entries = [
