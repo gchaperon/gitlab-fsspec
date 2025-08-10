@@ -27,12 +27,12 @@ def test_strip_protocol(url, expected):
     [
         (
             "gitlab://my/repo@master:file.txt",
-            {"project_path": "my/repo", "sha": "master"},
+            {"project_path": "my/repo", "ref": "master"},
         ),
-        ("gitlab://my/repo:file.txt", {"project_path": "my/repo"}),
+        ("gitlab://my/repo:file.txt", {"project_path": "my/repo", "ref": None}),
         (
             "gitlab://group/subgroup/project@v1.0:src/main.py",
-            {"project_path": "group/subgroup/project", "sha": "v1.0"},
+            {"project_path": "group/subgroup/project", "ref": "v1.0"},
         ),
         ("file.txt", {}),  # No gitlab protocol
     ],
