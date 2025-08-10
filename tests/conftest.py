@@ -16,7 +16,7 @@ def clean_gitlab_env(monkeypatch):
         "GITLAB_PRIVATE_TOKEN",
         "GITLAB_OAUTH_TOKEN",
         "GITLAB_JOB_TOKEN",
-        "CI_JOB_TOKEN"
+        "CI_JOB_TOKEN",
     ]
     for var in gitlab_env_vars:
         monkeypatch.delenv(var, raising=False)
