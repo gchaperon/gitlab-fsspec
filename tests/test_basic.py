@@ -181,8 +181,18 @@ def test_glob_no_matches(test_fs, pattern):
 @pytest.mark.parametrize(
     "pattern,expected_files",
     [
-        ("gitlab://gitlab-filesystem-test-repos/public:**/*.txt", {"docs/sample.txt", "nested/deep/very/far/deep_file.txt", "media/image_info.txt"}),
-        ("gitlab://gitlab-filesystem-test-repos/public:data/*", {"data/config.xml", "data/data.csv", "data/sample.json"}),
+        (
+            "gitlab://gitlab-filesystem-test-repos/public:**/*.txt",
+            {
+                "docs/sample.txt",
+                "nested/deep/very/far/deep_file.txt",
+                "media/image_info.txt",
+            },
+        ),
+        (
+            "gitlab://gitlab-filesystem-test-repos/public:data/*",
+            {"data/config.xml", "data/data.csv", "data/sample.json"},
+        ),
         ("gitlab://gitlab-filesystem-test-repos/public:*.md", {"README.md"}),
     ],
 )
@@ -196,7 +206,9 @@ def test_fsspec_open_files_glob(pattern, expected_files):
 
     # Extract paths from OpenFile objects
     found_paths = {f.path for f in files}
-    assert expected_files.issubset(found_paths), f"Pattern '{pattern}': Missing files: {expected_files - found_paths}"
+    assert expected_files.issubset(found_paths), (
+        f"Pattern '{pattern}': Missing files: {expected_files - found_paths}"
+    )
 
 
 def test_fsspec_expand_path_glob():
@@ -211,7 +223,11 @@ def test_fsspec_expand_path_glob():
     assert isinstance(result, list)
     assert len(result) >= 3
 
-    expected_files = {"docs/sample.txt", "nested/deep/very/far/deep_file.txt", "media/image_info.txt"}
+    expected_files = {
+        "docs/sample.txt",
+        "nested/deep/very/far/deep_file.txt",
+        "media/image_info.txt",
+    }
     found_set = set(result)
     assert expected_files.issubset(found_set)
 
@@ -237,10 +253,10 @@ def test_fsspec_open_files_context_manager():
 def test_pandas_csv_integration():
     """Test pandas integration example from README."""
     import pandas as pd
-    
+
     # Read CSV from GitLab (from README example)
-    df = pd.read_csv('gitlab://gitlab-filesystem-test-repos/public:data/data.csv')
-    
+    df = pd.read_csv("gitlab://gitlab-filesystem-test-repos/public:data/data.csv")
+
     # Verify it's a valid DataFrame
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
