@@ -1,5 +1,9 @@
 # GitLab fsspec
 
+[![CI](https://github.com/gchaperon/gitlab-fsspec/workflows/CI/badge.svg)](https://github.com/gchaperon/gitlab-fsspec/actions)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A read-only filesystem interface for GitLab repositories compatible with fsspec.
 
 ## Features
