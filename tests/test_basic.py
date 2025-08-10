@@ -232,3 +232,16 @@ def test_fsspec_open_files_context_manager():
         content = first_file.read()
         assert isinstance(content, bytes)
         assert len(content) > 0
+
+
+def test_pandas_csv_integration():
+    """Test pandas integration example from README."""
+    import pandas as pd
+    
+    # Read CSV from GitLab (from README example)
+    df = pd.read_csv('gitlab://gitlab-filesystem-test-repos/public:data/data.csv')
+    
+    # Verify it's a valid DataFrame
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) > 0
+    assert len(df.columns) > 0
