@@ -79,7 +79,7 @@ def create_gitlab_client(
     # Create GitLabAuth object using the provided auth_kwargs
     # This allows environment variables to be used as fallback
     auth = GitLabAuth(**(auth_kwargs or {}))
-    
+
     return gitlab.Gitlab(url, **auth.get_auth_kwargs())
 
 

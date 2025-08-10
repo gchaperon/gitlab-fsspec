@@ -25,9 +25,15 @@ def test_strip_protocol(url, expected):
 @pytest.mark.parametrize(
     "url,expected",
     [
-        ("gitlab://my/repo@master:file.txt", {"project_path": "my/repo", "sha": "master"}),
+        (
+            "gitlab://my/repo@master:file.txt",
+            {"project_path": "my/repo", "sha": "master"},
+        ),
         ("gitlab://my/repo:file.txt", {"project_path": "my/repo"}),
-        ("gitlab://group/subgroup/project@v1.0:src/main.py", {"project_path": "group/subgroup/project", "sha": "v1.0"}),
+        (
+            "gitlab://group/subgroup/project@v1.0:src/main.py",
+            {"project_path": "group/subgroup/project", "sha": "v1.0"},
+        ),
         ("file.txt", {}),  # No gitlab protocol
     ],
 )
@@ -40,11 +46,30 @@ def test_get_kwargs_from_urls(url, expected):
 @pytest.mark.parametrize(
     "url,expected_groups",
     [
-        ("gitlab://my/repo", {"project_path": "my/repo", "ref": None, "file_path": None}),
-        ("gitlab://my/repo@master", {"project_path": "my/repo", "ref": "master", "file_path": None}),
-        ("gitlab://my/repo:file.txt", {"project_path": "my/repo", "ref": None, "file_path": "file.txt"}),
-        ("gitlab://my/repo@master:file.txt", {"project_path": "my/repo", "ref": "master", "file_path": "file.txt"}),
-        ("gitlab://group/subgroup/project@v1.0:src/main.py", {"project_path": "group/subgroup/project", "ref": "v1.0", "file_path": "src/main.py"}),
+        (
+            "gitlab://my/repo",
+            {"project_path": "my/repo", "ref": None, "file_path": None},
+        ),
+        (
+            "gitlab://my/repo@master",
+            {"project_path": "my/repo", "ref": "master", "file_path": None},
+        ),
+        (
+            "gitlab://my/repo:file.txt",
+            {"project_path": "my/repo", "ref": None, "file_path": "file.txt"},
+        ),
+        (
+            "gitlab://my/repo@master:file.txt",
+            {"project_path": "my/repo", "ref": "master", "file_path": "file.txt"},
+        ),
+        (
+            "gitlab://group/subgroup/project@v1.0:src/main.py",
+            {
+                "project_path": "group/subgroup/project",
+                "ref": "v1.0",
+                "file_path": "src/main.py",
+            },
+        ),
     ],
 )
 def test_regex_pattern_valid_urls(url, expected_groups):
@@ -85,7 +110,9 @@ def test_fsspec_open_integration():
 
 def test_fsspec_open_with_ref():
     """Test fsspec.open with specific reference."""
-    with fsspec.open("gitlab://gitlab-filesystem-test-repos/public@main:README.md") as f:
+    with fsspec.open(
+        "gitlab://gitlab-filesystem-test-repos/public@main:README.md"
+    ) as f:
         content = f.read()
         assert isinstance(content, bytes)
         assert len(content) > 0
@@ -93,7 +120,9 @@ def test_fsspec_open_with_ref():
 
 def test_fsspec_open_nested_file():
     """Test opening nested file via fsspec.open."""
-    with fsspec.open("gitlab://gitlab-filesystem-test-repos/public:nested/deep/very/far/deep_file.txt") as f:
+    with fsspec.open(
+        "gitlab://gitlab-filesystem-test-repos/public:nested/deep/very/far/deep_file.txt"
+    ) as f:
         content = f.read()
         assert isinstance(content, bytes)
         assert len(content) > 0
@@ -101,7 +130,9 @@ def test_fsspec_open_nested_file():
 
 def test_fsspec_open_text_mode():
     """Test fsspec.open in text mode with automatic decoding."""
-    with fsspec.open("gitlab://gitlab-filesystem-test-repos/public:README.md", mode="r") as f:
+    with fsspec.open(
+        "gitlab://gitlab-filesystem-test-repos/public:README.md", mode="r"
+    ) as f:
         content = f.read()
         assert isinstance(content, str)
         assert len(content) > 0
